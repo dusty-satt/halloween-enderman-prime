@@ -5,7 +5,7 @@
 #include <SD.h>
 #include <arduino.h>
 #include "TMRpcm.h" 
-TMRpcm audioPlayer;
+TMRpcm tmrpcm;
 
 // pins
 int sdCardReaderCSPin = 3;
@@ -21,8 +21,6 @@ int aggroCooldownExpiration;
 int idleCooldownExpiration;
 bool isJawOpen = false; // Define the starting position of the jaw.  False = closed.
 int jawMotorTurnDirectionMultiplier = 1; // + or -, to determine the direction the motor will turn
-const char IDLE_SOUND[] = "idle.wav";
-const char AGGRO_SOUND[] = "aggro.wav";
 
 // How long of a delay should there be before the motion sensor can trigger aggro again?
 //int aggroDelay = 3; // 36 seconds (16 seconds for the audio + 20 second delay)
@@ -36,6 +34,7 @@ void setup() {
   Serial.begin(9600);
   
   // Setup SD Card Reader for audio reading
+  SD.begin(sdCardReaderCSPin);
 //  if (!SD.begin(sdCardReaderCSPin)) {
 //    Serial.println("Fatal Error: The SD Card Reader Failed to begin.");
 //    setupSuccess = false;
@@ -43,9 +42,9 @@ void setup() {
 //  }
   
   // Setup Amplifier and Audio
-  audioPlayer.speakerPin = amplifierPin;
-  audioPlayer.setVolume(2); // temporarily set at 2 for testing - buttons will control this later
-  audioPlayer.quality(1); // 0 = normal, 1 = 2x Oversampling
+  tmrpcm.speakerPin = amplifierPin;
+  tmrpcm.setVolume(2); // temporarily set at 2 for testing - buttons will control this later
+  tmrpcm.quality(1); // 0 = normal, 1 = 2x Oversampling
 
   // Setup PIR MotionSensor
   pinMode(motionSensorPin, INPUT);
@@ -107,10 +106,7 @@ void idle() {
   // retract the jaw lever
   openJaw(false);
   // play idle sound
-  if(!audioPlayer.play(IDLE_SOUND)) {
-    Serial.println("idle.wav failed to play.");
-    return;
-  }
+  tmrpcm.play("idle.wav");
 }
 
 /**
@@ -118,20 +114,16 @@ void idle() {
  */
 void getAngry() {
   // pause idle sounds
-  if(!audioPlayer.pause()) {
-    Serial.println("audioPlayer failed to pause.");
-    return;
-  }
+  tmrpcm.stopPlayback();
+  Serial.println("Audio: Stop Playback");
   
   // extend the jaw lever
   openJaw(true);
   
   // Play the aggro sounds 
   // TODO: (as the motor is turning, hopefully, otherwise code this to start playing before motor operation)
-  if(!audioPlayer.play(AGGRO_SOUND)) {
-    Serial.println("aggro.wav failed to play.");
-    return;
-  }
+  tmrpcm.play("aggro.wav");
+  Serial.println("Audio: Playing aggro.wav");
 }
 
 /**
